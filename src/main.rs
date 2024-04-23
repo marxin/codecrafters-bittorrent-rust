@@ -47,9 +47,6 @@ fn parse_bencode_value(value: &str) -> anyhow::Result<(Value, &str)> {
             let mut list = Vec::new();
             let mut value = &value[1..];
             loop {
-                let item = parse_bencode_value(value)?;
-                list.push(item.0);
-                value = item.1;
                 match value.chars().next() {
                     Some('e') => {
                         value = &value[1..];
@@ -60,6 +57,10 @@ fn parse_bencode_value(value: &str) -> anyhow::Result<(Value, &str)> {
                         break;
                     }
                 }
+
+                let item = parse_bencode_value(value)?;
+                list.push(item.0);
+                value = item.1;
             }
 
             Ok((Value::Array(list), value))
