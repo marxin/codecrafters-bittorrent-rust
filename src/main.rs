@@ -1,5 +1,10 @@
+use std::fs::File;
+use std::{io::Read, path::PathBuf};
+
 use clap::{Parser, Subcommand};
 use serde_json::{Map, Value};
+
+mod torrent;
 
 #[derive(Parser)]
 #[command(version, about, long_about = None)]
@@ -14,6 +19,11 @@ enum Commands {
     Decode {
         /// Encoded object value
         object: String,
+    },
+    /// Info about a metainfo file
+    Info {
+        /// Path to a .torrent file
+        path: PathBuf,
     },
 }
 
@@ -107,6 +117,14 @@ fn main() {
                 Ok(value) => println!("{}", value.0),
                 Err(err) => eprintln!("decode failed: {err}"),
             }
+        }
+        Commands::Info { path } => {
+            let mut file = File::open(path).unwrap();
+            let mut buffer = Vec::new();
+            file.read_to_end(&mut buffer).unwrap();
+            let torrent = serde_bencode::de::from_bytes::<torrent::TorrentFile>(&buffer).unwrap();
+            println!("Tracker URL: {}", torrent.announce);
+            println!("Length: {}", torrent.info.length);
         }
     }
 }
