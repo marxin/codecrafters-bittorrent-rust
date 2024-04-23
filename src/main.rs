@@ -128,11 +128,18 @@ fn main() {
             println!("Tracker URL: {}", torrent.announce);
             println!("Length: {}", torrent.info.length);
 
+            // Stage 6
             let data = serde_bencode::ser::to_bytes(&torrent.info).unwrap();
             let mut hasher = Sha1::new();
             hasher.update(data);
             let hash = hex::encode(hasher.finalize()).to_string();
             println!("Info Hash: {hash}");
+
+            // Stage 7
+            println!("Piece Length: {}", torrent.info.piece_length);
+            for piece_hash in torrent.info.pieces.0.iter() {
+                println!("{}", hex::encode(piece_hash));
+            }
         }
     }
 }

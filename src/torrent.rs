@@ -5,7 +5,7 @@ use serde::de::{self, Deserializer, Visitor};
 use serde::{Deserialize, Serialize, Serializer};
 
 #[derive(Debug)]
-struct Hashes(Vec<[u8; 20]>);
+pub(crate) struct Hashes(pub Vec<[u8; 20]>);
 
 struct HashVisitor;
 
