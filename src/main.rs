@@ -35,6 +35,14 @@ fn parse_bencode_value(value: &str) -> anyhow::Result<(Value, &str)> {
                 &content[length..],
             ))
         }
+        Some('i') => {
+            let Some(pos) = value.chars().position(|c| c == 'e') else {
+                anyhow::bail!("missing 'e' character");
+            };
+
+            let number = value[1..pos].parse::<i64>()?;
+            Ok((Value::Number(number.into()), &value[pos..]))
+        }
         Some(_) => todo!(),
         None => Ok((Value::Null, "")),
     }
