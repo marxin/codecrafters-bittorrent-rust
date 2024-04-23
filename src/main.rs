@@ -1,5 +1,4 @@
 use std::fs::File;
-use std::io::Write;
 use std::{io::Read, path::PathBuf};
 
 use clap::{Parser, Subcommand};

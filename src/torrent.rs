@@ -21,7 +21,8 @@ impl<'de> Visitor<'de> for HashVisitor {
         E: de::Error,
     {
         let items: Result<Vec<_>, _> = value.chunks(20).map(|c| c.try_into()).collect();
-        let items: Vec<[u8; 20]> = items.map_err(|e| de::Error::custom("cannot parse [u8; 20]"))?;
+        let items: Vec<[u8; 20]> =
+            items.map_err(|e| de::Error::custom(format!("cannot parse [u8; 20]: {e}")))?;
         if let Some(last) = items.last() {
             if last.len() != 20 {
                 return Err(de::Error::custom(format!(
