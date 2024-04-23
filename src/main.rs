@@ -1,5 +1,5 @@
 use clap::{Parser, Subcommand};
-use serde_json::{Value};
+use serde_json::Value;
 
 #[derive(Parser)]
 #[command(version, about, long_about = None)]
@@ -41,7 +41,28 @@ fn parse_bencode_value(value: &str) -> anyhow::Result<(Value, &str)> {
             };
 
             let number = value[1..pos].parse::<i64>()?;
-            Ok((Value::Number(number.into()), &value[pos..]))
+            Ok((Value::Number(number.into()), &value[pos + 1..]))
+        }
+        Some('l') => {
+            let mut list = Vec::new();
+            let mut value = &value[1..];
+            loop {
+                let item = parse_bencode_value(value)?;
+                list.push(item.0);
+                value = item.1;
+                match value.chars().next() {
+                    Some('e') => {
+                        value = &value[1..];
+                        break;
+                    }
+                    Some(_) => {}
+                    None => {
+                        break;
+                    }
+                }
+            }
+
+            Ok((Value::Array(list), value))
         }
         Some(_) => todo!(),
         None => Ok((Value::Null, "")),
