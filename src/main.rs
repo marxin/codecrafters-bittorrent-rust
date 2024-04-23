@@ -1,5 +1,5 @@
 use clap::{Parser, Subcommand};
-use serde_json::Value;
+use serde_json::{Map, Value};
 
 #[derive(Parser)]
 #[command(version, about, long_about = None)]
@@ -64,6 +64,33 @@ fn parse_bencode_value(value: &str) -> anyhow::Result<(Value, &str)> {
             }
 
             Ok((Value::Array(list), value))
+        }
+        Some('d') => {
+            let mut dictionary = Map::new();
+            let mut value = &value[1..];
+            loop {
+                match value.chars().next() {
+                    Some('e') => {
+                        value = &value[1..];
+                        break;
+                    }
+                    Some(_) => {}
+                    None => {
+                        break;
+                    }
+                }
+
+                let (key, next_value) = parse_bencode_value(value)?;
+                let (v, next_value) = parse_bencode_value(next_value)?;
+                let Value::String(key) = key else {
+                    anyhow::bail!("Unexpected map key: {v}");
+                };
+                value = next_value;
+
+                dictionary.insert(key, v);
+            }
+
+            Ok((Value::Object(dictionary), value))
         }
         Some(_) => todo!(),
         None => Ok((Value::Null, "")),
