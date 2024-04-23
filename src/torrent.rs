@@ -2,7 +2,7 @@ use std::fmt;
 use std::path::PathBuf;
 
 use serde::de::{self, Deserializer, Visitor};
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Serialize, Serializer};
 
 #[derive(Debug)]
 struct Hashes(Vec<[u8; 20]>);
@@ -43,7 +43,17 @@ impl<'de> Deserialize<'de> for Hashes {
     }
 }
 
-#[derive(Deserialize, Debug)]
+impl Serialize for Hashes {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        let data: Vec<u8> = self.0.concat().into_iter().collect();
+        serializer.serialize_bytes(&data)
+    }
+}
+
+#[derive(Deserialize, Serialize, Debug)]
 pub(crate) struct Info {
     pub length: usize,
     pub name: PathBuf,
@@ -52,7 +62,7 @@ pub(crate) struct Info {
     pub pieces: Hashes,
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Serialize, Debug)]
 pub(crate) struct TorrentFile {
     pub announce: String,
     pub info: Info,

@@ -1,8 +1,10 @@
 use std::fs::File;
+use std::io::Write;
 use std::{io::Read, path::PathBuf};
 
 use clap::{Parser, Subcommand};
 use serde_json::{Map, Value};
+use sha1::{Digest, Sha1};
 
 mod torrent;
 
@@ -125,6 +127,12 @@ fn main() {
             let torrent = serde_bencode::de::from_bytes::<torrent::TorrentFile>(&buffer).unwrap();
             println!("Tracker URL: {}", torrent.announce);
             println!("Length: {}", torrent.info.length);
+
+            let data = serde_bencode::ser::to_bytes(&torrent.info).unwrap();
+            let mut hasher = Sha1::new();
+            hasher.update(data);
+            let hash = hex::encode(hasher.finalize()).to_string();
+            println!("Info Hash: {hash}");
         }
     }
 }
