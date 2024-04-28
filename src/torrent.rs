@@ -75,7 +75,7 @@ pub struct Peers(pub Vec<SocketAddrV4>);
 
 #[derive(Deserialize, Debug)]
 pub struct TrackerResponse {
-    pub interval: usize,
+    pub _interval: usize,
     pub peers: Peers,
 }
 

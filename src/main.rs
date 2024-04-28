@@ -3,7 +3,6 @@ use std::{io::Read, path::PathBuf};
 
 use clap::{Parser, Subcommand};
 use reqwest::{blocking, Url};
-use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value};
 use sha1::{Digest, Sha1};
 
@@ -173,7 +172,7 @@ fn main() {
             let mut hasher = Sha1::new();
             hasher.update(data);
             let hash: [u8; 20] = hasher.finalize().into();
-            let hash_string = hash.map(|c| format!("%{}", hex::encode(&[c]))).join("");
+            let hash_string = hash.map(|c| format!("%{}", hex::encode([c]))).join("");
             println!("hash_string: {hash_string}");
 
             let url = Url::parse_with_params(
