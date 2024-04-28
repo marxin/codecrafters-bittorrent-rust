@@ -1,6 +1,7 @@
 use std::fs::File;
 use std::{io::Read, path::PathBuf};
 
+use binrw::{binrw, BinRead, BinWrite};
 use clap::{Parser, Subcommand};
 use reqwest::{blocking, Url};
 use serde_json::{Map, Value};
@@ -173,7 +174,7 @@ fn main() {
             hasher.update(data);
             let hash: [u8; 20] = hasher.finalize().into();
             let hash_string = hash.map(|c| format!("%{}", hex::encode([c]))).join("");
-            println!("hash_string: {hash_string}");
+            println!("hash_string: {hash_string} {}", hex::encode(&hash));
 
             let url = Url::parse_with_params(
                 &torrent.announce,
@@ -200,5 +201,42 @@ fn main() {
                 println!("{peer:?}");
             }
         }
+    }
+}
+
+#[derive(BinRead, BinWrite, Debug)]
+#[brw(magic = b"\x19BitTorrent protocol")]
+struct Handshake {
+    padding: [u8; 8],
+    hash: [u8; 20],
+    id: [u8; 20],
+}
+
+impl Handshake {
+    fn new(hash: [u8; 20], id: [u8; 20]) -> Self {
+        Handshake {
+            padding: [0u8; 8],
+            hash,
+            id,
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use binrw::BinRead;
+    use std::io::Cursor;
+
+    use crate::Handshake;
+
+    #[test]
+    fn peer_handshake_binrw() {
+        let mut data = Cursor::new(b"\x19BitTorrent protocol\x00\x00\x00\x00\x00\x00\x00\x00d69f91e6b2ae4c54246800112233445566778899");
+        let handshake = Handshake::read_le(&mut data).unwrap();
+        assert_eq!(handshake.padding, [0u8; 8]);
+        assert_eq!(handshake.hash[0], 100);
+        assert_eq!(handshake.id[0], 48);
+        assert_eq!(handshake.id[19], 57);
+        println!("{handshake:?}");
     }
 }
