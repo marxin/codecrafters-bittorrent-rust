@@ -2,6 +2,8 @@ use std::fs::File;
 use std::{io::Read, path::PathBuf};
 
 use clap::{Parser, Subcommand};
+use reqwest::{blocking, Url};
+use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value};
 use sha1::{Digest, Sha1};
 
@@ -23,6 +25,11 @@ enum Commands {
     },
     /// Info about a metainfo file
     Info {
+        /// Path to a .torrent file
+        path: PathBuf,
+    },
+    /// Make a tracker request asking for peers
+    Peers {
         /// Path to a .torrent file
         path: PathBuf,
     },
@@ -108,6 +115,21 @@ fn parse_bencode_value(value: &str) -> anyhow::Result<(Value, &str)> {
     }
 }
 
+/*
+
+#[derive(Serialize, Deserialize)]
+struct TrackerRequest {
+    info_hash: [u8; 20],
+    peer_id: String,
+    port: u16,
+    uploaded: usize,
+    downloaded: usize,
+    left: usize,
+    compact: u8,
+}
+
+*/
+
 // Usage: your_bittorrent.sh decode "<encoded_value>"
 fn main() {
     let cli = Cli::parse();
@@ -138,6 +160,45 @@ fn main() {
             println!("Piece Length: {}", torrent.info.piece_length);
             for piece_hash in torrent.info.pieces.0.iter() {
                 println!("{}", hex::encode(piece_hash));
+            }
+        }
+        Commands::Peers { path } => {
+            let mut file = File::open(path).unwrap();
+            let mut buffer = Vec::new();
+            file.read_to_end(&mut buffer).unwrap();
+            let torrent = serde_bencode::de::from_bytes::<torrent::TorrentFile>(&buffer).unwrap();
+
+            // TODO: factor out
+            let data = serde_bencode::ser::to_bytes(&torrent.info).unwrap();
+            let mut hasher = Sha1::new();
+            hasher.update(data);
+            let hash: [u8; 20] = hasher.finalize().into();
+            let hash_string = hash.map(|c| format!("%{}", hex::encode(&[c]))).join("");
+            println!("hash_string: {hash_string}");
+
+            let url = Url::parse_with_params(
+                &torrent.announce,
+                &[
+                    ("peer_id", "00112233445566778899"),
+                    ("port", "6881"),
+                    ("uploaded", "0"),
+                    ("downloaded", "0"),
+                    ("left", torrent.info.length.to_string().as_str()),
+                    ("compact", "1"),
+                ],
+            )
+            .unwrap();
+            let url_string = format!("{url}&info_hash={hash_string}");
+
+            println!("{url_string}");
+            let response = blocking::get(Url::parse(&url_string).unwrap())
+                .unwrap()
+                .bytes()
+                .unwrap();
+            let tracker_response =
+                serde_bencode::de::from_bytes::<torrent::TrackerResponse>(&response).unwrap();
+            for peer in tracker_response.peers.0.iter() {
+                println!("{peer:?}");
             }
         }
     }
